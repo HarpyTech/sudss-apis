@@ -99,29 +99,44 @@ Each workflow uses GitHub secrets:
 ### 6. **Architecture Diagram**
 ```mermaid
 graph TD
+    %% Shared Common Code
     subgraph Monorepo
         A[common/ <br> common-utils]
-        B[gemini-pro-api/]
-        C[med-gemma-api/]
+        B[gemini-pro-api/ <br> Service A]
+        C[med-gemma-api/ <br> Service B]
+        D[future-service-1/]
+        E[future-service-2/]
     end
 
+    %% Dependencies
     A --> B
     A --> C
+    A --> D
+    A --> E
 
+    %% GitHub Branches
     subgraph GitHub["GitHub Branches"]
         F[develop]
         G[main]
     end
 
+    %% Current Service Workflow Paths
     B -->|PR Merge| F
     C -->|PR Merge| F
+    D -->|PR Merge| F
+    E -->|PR Merge| F
+
     F -->|CI/CD Workflow| H[Cloud Run: Staging Deployment]
 
     B -->|PR Merge| G
     C -->|PR Merge| G
+    D -->|PR Merge| G
+    E -->|PR Merge| G
+
     G -->|CI/CD Workflow| I[VM: Production Deployment]
 
-    subgraph Google Cloud
+    %% Deployment Targets
+    subgraph Deployment["Deployment Targets"]
         H
         I
     end
