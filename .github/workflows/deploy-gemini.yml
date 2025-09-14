@@ -1,0 +1,90 @@
+name: Deploy Gemini Pro API
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+    paths:
+      - 'gemini-pro-api/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'gemini-pro-api/**'
+
+env:
+  SERVICE_NAME: gemini-pro-api
+  IMAGE_NAME: gemini-pro-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+          export_default_credentials: true
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+          BRANCH_NAME=$(echo "${GITHUB_REF##*/}" | tr '/' '-')
+          IMAGE_TAG="${BRANCH_NAME}-${GITHUB_SHA}"
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
+
+  deploy-cloudrun:
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Cloud Run
+        run: |
+          BRANCH_NAME=$(echo "${GITHUB_REF##*/}" | tr '/' '-')
+          IMAGE_TAG="${BRANCH_NAME}-${GITHUB_SHA}"
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+          gcloud run deploy gemini-pro-dev \
+            --image "$IMAGE_URI" \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --set-env-vars "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}"
+
+  deploy-vm:
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            BRANCH_NAME=$(echo "${GITHUB_REF##*/}" | tr '/' '-')
+            IMAGE_TAG="${BRANCH_NAME}-${GITHUB_SHA}"
+            IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${IMAGE_TAG}"
+
+            # Pull the latest image
+            docker pull "$IMAGE_URI"
+            
+            # Stop and remove existing container if it exists
+            docker stop gemini-pro-prod || true
+            docker rm gemini-pro-prod || true
+            
+            # Run new container
+            docker run -d \
+              --name gemini-pro-prod \
+              -p 8080:8080 \
+              -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+              "$IMAGE_URI"
