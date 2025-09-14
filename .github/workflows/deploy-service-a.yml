@@ -1,0 +1,40 @@
+name: Deploy Gemini Pro (Service A)
+
+# Triggers when commits change service-specific files OR the shared `common/` library
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'gemini-pro-api/**'
+      - 'common/**'
+
+env:
+  # Artifact Registry image name (region-based URL)
+  IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/service-a-repo/service-a:${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up GCP credentials
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_CREDENTIALS }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          export_default_credentials: true
+
+      - name: Configure Docker to use gcloud credential helper
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build Docker image (context = repository root so Dockerfile can COPY common/)
+        run: docker build -t ${{ env.IMAGE }} -f gemini-pro-api/Dockerfile .
+
+      - name: Push image to Artifact Registry
+        run: docker push ${{ env.IMAGE }}
+
+      - name: Deploy to Cloud Run (service-a-instance)
+        run: |
+          gcloud run deploy service-a-instance                     --image=${{ env.IMAGE }}                     --region=${{ secrets.GCP_REGION }}                     --platform=managed                     --allow-unauthenticated
