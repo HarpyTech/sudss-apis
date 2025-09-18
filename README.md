@@ -122,10 +122,7 @@ graph TD
 
     F -->|CI/CD Workflow| H[Cloud Run: Staging Deployment]
 
-    B -->|PR Merge| G
-    C -->|PR Merge| G
-    D -->|PR Merge| G
-    E -->|PR Merge| G
+    F -->|PR Merge| G
 
     G -->|CI/CD Workflow| I[VM: Production Deployment]
 
