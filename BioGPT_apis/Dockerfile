@@ -1,27 +1,18 @@
-    # Multi-stage Dockerfile for Med-Gemma (Service B)
-    FROM python:3.11-slim AS builder
-    WORKDIR /app
+# Use PyTorch base image (latest available, CUDA runtime)
+FROM pytorch/pytorch:2.1.2-cpu
 
-    RUN apt-get update \
-&& apt-get install -y --no-install-recommends build-essential gcc libffi-dev \
-&& rm -rf /var/lib/apt/lists/*
 
-    COPY common /app/common
-    COPY med-gemma-api /app/app
+WORKDIR /app
 
-    RUN python -m pip install --upgrade pip setuptools wheel \
-&& pip install /app/common \
-&& cd /app/app \
-&& pip install -r requirements.txt
+# Copy requirements first and install
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-    FROM python:3.11-slim
-    WORKDIR /app
-    COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-    COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy the rest of the app
+COPY . .
 
-    COPY common /app/common
-    COPY med-gemma-api /app/app
+# Expose FastAPI port
+EXPOSE 8080
 
-    EXPOSE 8080
-    WORKDIR /app/app
-    CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run the FastAPI app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
