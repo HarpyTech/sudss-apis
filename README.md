@@ -100,19 +100,13 @@ Each workflow uses GitHub secrets:
 ```mermaid
 graph TD
     %% Shared Common Code
-    subgraph Monorepo
-        A[common/ <br> common-utils]
+    subgraph SUDSS-APIS
+        
         B[gemini-pro-api/ <br> Service A]
         C[med-gemma-api/ <br> Service B]
         D[future-service-1/]
         E[future-service-2/]
     end
-
-    %% Dependencies
-    A --> B
-    A --> C
-    A --> D
-    A --> E
 
     %% GitHub Branches
     subgraph GitHub["GitHub Branches"]
