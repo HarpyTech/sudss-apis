@@ -10,9 +10,11 @@ try:
 except Exception:
     def get_timestamp(): return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 TX_GEMMA_MODEL = os.getenv("TX_GEMMA_MODEL", "google/gemma-2-2b-it")  # small & CPU-friendly
+HF_TOKEN = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
 MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "256"))
 TEMPERATURE    = float(os.getenv("TEMPERATURE", "0.7"))
 TOP_P          = float(os.getenv("TOP_P", "0.95"))
@@ -26,10 +28,11 @@ def load_model():
     if _tok is not None and _lm is not None:
         return _tok, _lm
 
-    _tok = AutoTokenizer.from_pretrained(TX_GEMMA_MODEL)
+    _tok = AutoTokenizer.from_pretrained(TX_GEMMA_MODEL, token=HF_TOKEN)  # <—
     dtype = torch.float16 if torch.cuda.is_available() else torch.float32
     _lm = AutoModelForCausalLM.from_pretrained(
         TX_GEMMA_MODEL,
+        token=HF_TOKEN,             # <—
         torch_dtype=dtype,
         device_map="auto" if torch.cuda.is_available() else None,
         low_cpu_mem_usage=True,
@@ -65,13 +68,24 @@ class ChatRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "tx-gemma-api", "model": TX_GEMMA_MODEL, "time": get_timestamp()}
-
 @app.post("/v1/generate")
 def generate(req: GenerateRequest):
     try:
         tok, lm = load_model()
-        inputs = tok(req.prompt, return_tensors="pt")
-        if torch.cuda.is_available(): inputs = {k: v.to(lm.device) for k,v in inputs.items()}
+
+        # If the tokenizer has a chat template (e.g., Gemma), wrap the prompt as a **user** message.
+        if getattr(tok, "chat_template", None):
+            msgs = [{"role": "user", "content": req.prompt}]  # no 'system' here
+            prompt = tok.apply_chat_template(
+                msgs, tokenize=False, add_generation_prompt=True
+            )
+        else:
+            prompt = req.prompt
+
+        inputs = tok(prompt, return_tensors="pt")
+        if torch.cuda.is_available():
+            inputs = {k: v.to(lm.device) for k, v in inputs.items()}
+
         with torch.no_grad():
             out = lm.generate(
                 **inputs,
@@ -81,12 +95,19 @@ def generate(req: GenerateRequest):
                 top_k=req.top_k,
                 max_new_tokens=req.max_new_tokens,
                 pad_token_id=tok.eos_token_id,
-                eos_token_id=tok.eos_token_id
+                eos_token_id=tok.eos_token_id,
             )
-        text = tok.decode(out[0], skip_special_tokens=True)
+
+        # Strip the prompt portion so you only return the new text
+        gen_ids = out[0][inputs["input_ids"].shape[-1]:]
+        text = tok.decode(gen_ids, skip_special_tokens=True).strip()
         return {"model": TX_GEMMA_MODEL, "created": int(time.time()), "text": text}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 @app.post("/v1/chat")
 def chat(req: ChatRequest):
