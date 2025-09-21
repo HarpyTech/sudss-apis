@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from common_utils.helpers import get_timestamp
+
 import logging
 from datetime import datetime
 
@@ -14,6 +14,11 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+
+def get_timestamp():
+    return datetime.now().isoformat()
+
 
 app = FastAPI(title="Med-Gemma API (Service B)")
 
