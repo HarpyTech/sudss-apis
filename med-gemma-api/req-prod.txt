@@ -1,0 +1,33 @@
+# Core HF + model infra (no torch wheels here; torch installed in Dockerfile)
+transformers==4.52.3
+accelerate==1.7.0
+bitsandbytes==0.46.0
+huggingface-hub==0.32.2
+safetensors==0.5.3
+tokenizers==0.21.1
+
+# LangChain / pipeline tools (if used)
+# langchain  may be required if you incorporate agent logic; uncomment if needed
+# langchain==0.1.0
+
+# FastAPI + server
+fastapi>=0.95,<1.0
+gunicorn>=20.1.0
+uvicorn[standard]>=0.20.0
+python-multipart>=0.0.6
+aiofiles>=23.2.1
+pydantic>=1.10.12
+
+# HTTP / downloads
+httpx>=0.28.1
+requests>=2.32.3
+
+# Image / utils
+Pillow==11.2.1
+
+# Optional / helpers
+httpcore>=0.16.3
+python-dotenv>=1.0.0
+
+# (Optional) add sentence-transformers if you use embeddings
+# sentence-transformers>=2.2.2
