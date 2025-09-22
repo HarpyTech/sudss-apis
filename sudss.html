@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Diagnosis & Evaluation Suite</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for dashboards -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Hide elements by default */
+        .page-hidden {
+            display: none;
+        }
+
+        /* Simple spinner animation */
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            width: 1.25rem;
+            height: 1.25rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast notification styles */
+        #toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            background-color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slide-in 0.5s forwards, fade-out 0.5s 3.5s forwards;
+        }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fade-out {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        /* Active nav link style */
+        .nav-link.active {
+            background-color: #4f46e5;
+            /* indigo-600 */
+            color: white;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            /* Or responsive height */
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <!-- Main container for the application -->
+    <div id="app" class="h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-md w-full">
+            <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M12 6V3m0 18v-3m6-9h3m-3 6h3M3 12h18M9 21h6">
+                        </path>
+                    </svg>
+                    <h1 class="text-2xl font-bold text-gray-800">Clinical Diagnosis & Evaluation Suite</h1>
+                </div>
+            </div>
+            <!-- Navigation Menu -->
+            <nav class="bg-gray-800">
+                <div class="container mx-auto px-6">
+                    <ul class="flex">
+                        <li><a href="#"
+                                class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-3 text-sm font-medium rounded-md"
+                                data-page="home">Home</a></li>
+                        <li><a href="#"
+                                class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-3 text-sm font-medium rounded-md"
+                                data-page="diagnosis">Diagnosis</a></li>
+                        <li><a href="#"
+                                class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-3 text-sm font-medium rounded-md"
+                                data-page="reporting">Reporting</a></li>
+                        <li><a href="#"
+                                class="nav-link text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-3 text-sm font-medium rounded-md"
+                                data-page="evaluations">Evaluations</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow container mx-auto p-6 "> <!-- overflow-y-auto -->
+
+            <!-- Home Page -->
+            <div id="home-page" class="page-content">
+                <div class="bg-white rounded-2xl shadow-xl p-8 text-center  overflow-y-auto">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Welcome to the AI-Powered Clinical Support Suite
+                    </h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto mb-8">This application leverages advanced AI to provide
+                        diagnostic insights from medical data. Navigate through the sections to generate new reports,
+                        view historical data, and evaluate model performance over time.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-200">
+                            <h3 class="font-semibold text-lg text-indigo-800">Generate Diagnoses</h3>
+                            <p class="text-sm text-indigo-700 mt-2">Upload medical images or text to receive an
+                                AI-generated diagnostic summary instantly.</p>
+                        </div>
+                        <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                            <h3 class="font-semibold text-lg text-green-800">Track Reports</h3>
+                            <p class="text-sm text-green-700 mt-2">All generated reports are saved with a trust score,
+                                providing a complete history for review.</p>
+                        </div>
+                        <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                            <h3 class="font-semibold text-lg text-yellow-800">Evaluate Performance</h3>
+                            <p class="text-sm text-yellow-700 mt-2">Interactive dashboards provide insights into the
+                                AI's average trust score and performance across different categories.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Page -->
+            <div id="diagnosis-page" class="page-content page-hidden">
+                <div
+                    class="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start  overflow-y-auto">
+                    <div class="space-y-6">
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-700">Patient Data Input</h2>
+                            <p class="text-sm text-gray-500 mt-1">Upload a medical image or provide a text description.
+                            </p>
+                        </div>
+                        <div id="file-upload-area"
+                            class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors">
+                            <input type="file" id="file-input" class="hidden"
+                                accept="image/jpeg,image/png,application/pdf,text/plain">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none"
+                                viewBox="0 0 48 48" aria-hidden="true">
+                                <path
+                                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 4v.01M28 8L36 16m0 0v12a4 4 0 01-4 4H12a4 4 0 01-4-4V12a4 4 0 014-4h12m16 4l-8-8"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p id="file-upload-text" class="mt-2 text-sm text-gray-600"><span
+                                    class="font-semibold text-indigo-600">Click to upload</span> or drag and drop</p>
+                            <p class="text-xs text-gray-500">PNG, JPG, PDF, or TXT</p>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center"><span class="w-full border-t"></span></div>
+                            <div class="relative flex justify-center text-sm"><span
+                                    class="bg-white px-2 text-gray-500">OR</span></div>
+                        </div>
+                        <div>
+                            <textarea id="text-input" rows="6"
+                                class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                placeholder="Enter clinical notes, patient history, or other relevant text..."></textarea>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button id="diagnose-btn"
+                                class="flex-1 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-indigo-300"><span
+                                    id="diagnose-spinner" class="spinner hidden"></span><span>Get
+                                    Diagnosis</span></button>
+                            <button id="download-btn"
+                                class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-green-300"><span
+                                    id="download-spinner" class="spinner hidden"></span><span>Download
+                                    PDF</span></button>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-6 h-full min-h-[400px] flex flex-col">
+                        <h2 class="text-xl font-semibold text-gray-700 mb-4">Diagnostic Summary</h2>
+                        <div id="output-area" class="flex-grow overflow-y-auto prose prose-sm max-w-none">
+                            <p class="text-gray-500 italic">The generated diagnostic report will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reporting Page -->
+            <div id="reporting-page" class="page-content page-hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-8  overflow-y-auto">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Diagnosis History</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Date</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Category</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Input Type</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Trust Score</th>
+                                    <th
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- History rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div id="pagination-controls" class="mt-6 flex justify-between items-center"></div>
+                </div>
+            </div>
+
+            <!-- Evaluations Page -->
+            <div id="evaluations-page" class="page-content page-hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-8 space-y-8  overflow-y-auto">
+                    <h2 class="text-2xl font-bold text-gray-800">Performance Evaluations</h2>
+
+                    <!-- Key Metrics -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Average Trust Score</h3>
+                            <p id="avg-trust-score" class="mt-1 text-3xl font-semibold text-indigo-600">0.0%</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Total Reports</h3>
+                            <p id="total-reports" class="mt-1 text-3xl font-semibold text-indigo-600">0</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h3 class="text-sm font-medium text-gray-500">Highest Scored Category</h3>
+                            <p id="highest-category" class="mt-1 text-3xl font-semibold text-indigo-600">N/A</p>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-semibold text-gray-700 mb-4">Avg. Trust Score by Category</h3>
+                            <div class="chart-container"><canvas id="category-chart"></canvas></div>
+                        </div>
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="font-semibold text-gray-700 mb-4">Report Distribution by Category</h3>
+                            <div class="chart-container"><canvas id="distribution-chart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Conclusion -->
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Conclusion</h3>
+                        <div class="prose max-w-none text-gray-600">
+                            <p>The evaluation dashboard provides a clear overview of the AI model's real-time
+                                performance. A key feature of this suite is the continuous improvement loop; as the
+                                clinician provides implicit feedback while generating a diagnosis, the model can adapt,
+                                leading to a steady enhancement of trust scores over time. This collaborative
+                                "human-in-the-loop" approach ensures that the AI becomes an increasingly reliable and
+                                accurate partner in clinical support workflows, fostering greater confidence and better
+                                patient outcomes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast container for notifications -->
+    <div id="toast-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- STATE & CONFIG ---
+            const MOCK_API_BASE_URL = 'http://127.0.0.1:8000';
+            let selectedFile = null;
+            let chartInstances = {};
+            let currentPage = 1;
+            const ITEMS_PER_PAGE = 20;
+
+            // --- DOM ELEMENT REFERENCES ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pageContents = document.querySelectorAll('.page-content');
+            const fileInput = document.getElementById('file-input');
+            const fileUploadArea = document.getElementById('file-upload-area');
+            const fileUploadText = document.getElementById('file-upload-text');
+            const textInput = document.getElementById('text-input');
+            const diagnoseBtn = document.getElementById('diagnose-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const outputArea = document.getElementById('output-area');
+            const toastContainer = document.getElementById('toast-container');
+            const diagnoseSpinner = document.getElementById('diagnose-spinner');
+            const downloadSpinner = document.getElementById('download-spinner');
+            const historyTableBody = document.getElementById('history-table-body');
+            const avgTrustScoreEl = document.getElementById('avg-trust-score');
+            const totalReportsEl = document.getElementById('total-reports');
+            const highestCategoryEl = document.getElementById('highest-category');
+            const paginationControls = document.getElementById('pagination-controls');
+
+            // --- PAGE NAVIGATION ---
+            const showPage = (pageId) => {
+                pageContents.forEach(page => page.classList.add('page-hidden'));
+                document.getElementById(`${pageId}-page`).classList.remove('page-hidden');
+
+                navLinks.forEach(link => {
+                    link.classList.toggle('active', link.dataset.page === pageId);
+                });
+
+                if (pageId === 'reporting') {
+                    currentPage = 1;
+                    renderReportHistory(currentPage);
+                }
+                if (pageId === 'evaluations') renderEvaluationDashboard();
+            };
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showPage(e.target.dataset.page);
+                });
+            });
+
+            // --- UI HELPER FUNCTIONS ---
+            const showToast = (message, isError = false) => {
+                const toast = document.createElement('div');
+                toast.className = `toast ${isError ? 'text-red-700' : 'text-green-700'}`;
+                toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span><span>${message}</span>`;
+                toastContainer.appendChild(toast);
+                setTimeout(() => toast.remove(), 4000);
+            };
+            const setLoadingState = (isLoading, action) => {
+                const spinner = action === 'diagnose' ? diagnoseSpinner : downloadSpinner;
+                spinner.classList.toggle('hidden', !isLoading);
+                diagnoseBtn.disabled = isLoading;
+                downloadBtn.disabled = isLoading;
+            };
+
+            // --- DATA PERSISTENCE & MOCK DATA ---
+            const getHistory = () => JSON.parse(localStorage.getItem('diagnosisHistory')) || [];
+            const saveHistory = (history) => localStorage.setItem('diagnosisHistory', JSON.stringify(history));
+
+            const addHistoryEntry = (entry) => {
+                const history = getHistory();
+                history.unshift(entry);
+                saveHistory(history);
+            };
+
+            const initializeMockData = () => {
+                if (getHistory().length > 0) return;
+
+                const mockData = [];
+                const categories = ['X-Ray', 'MRI', 'General', 'Lab'];
+                const summaries = [
+                    'Chest X-ray shows minor infiltrates in the lower lobe...',
+                    'Brain MRI indicates no acute intracranial abnormalities...',
+                    'Patient presents with symptoms of seasonal allergies...',
+                    'Blood panel shows elevated white blood cell count...',
+                    'Left tibia fracture confirmed, no signs of displacement...',
+                    'Routine check-up, vital signs are all stable...',
+                    'Spinal MRI shows mild disc herniation at L4-L5...',
+                    'No evidence of pneumonia or other acute disease...',
+                    'Urinalysis is clear, no signs of infection detected...',
+                    'Dermatological image shows benign nevus...',
+                ];
+
+                for (let i = 0; i < 53; i++) {
+                    const date = new Date(Date.now() - i * 1000 * 60 * 60 * 5); // Go back in 5-hour increments
+                    mockData.push({
+                        id: Date.now() - i,
+                        date: date.toLocaleString('en-US', {dateStyle: 'short', timeStyle: 'short'}),
+                        category: categories[i % categories.length],
+                        inputType: i % 3 === 0 ? 'Text' : 'Image',
+                        trustScore: (Math.random() * (98.5 - 75.0) + 75.0).toFixed(1),
+                        summary: summaries[i % summaries.length]
+                    });
+                }
+                saveHistory(mockData);
+            };
+
+            // --- API & MOCKING LOGIC ---
+            const performDiagnosis = async (endpoint) => {
+                const text = textInput.value.trim();
+                if (!selectedFile && !text) {
+                    showToast('Please upload a file or enter text.', true);
+                    return null;
+                }
+                const formData = new FormData();
+                if (selectedFile) formData.append('file', selectedFile);
+                if (text) formData.append('text', text);
+
+                try {
+                    const response = await fetch(`${MOCK_API_BASE_URL}/${endpoint}`, {method: 'POST', body: formData});
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
+                    }
+                    return response;
+                } catch (error) {
+                    console.error('API call failed:', error);
+                    showToast('Server connection failed. Using mock data.', true);
+                    if (endpoint === 'diagnose/download') {
+                        const pdfBlob = new Blob(["Mock PDF content"], {type: 'application/pdf'});
+                        return new Response(pdfBlob);
+                    }
+                    return new Response(JSON.stringify({
+                        summary: {output: "### Mock Findings\n- The scan shows clear signs of bilateral pneumonia.\n- Mild pleural effusion is noted on the left side.\n\n### Mock Impressions\n- The findings are consistent with a bacterial infection.\n- Recommend follow-up with a pulmonologist and a course of antibiotics."}
+                    }), {headers: {'Content-Type': 'application/json'}});
+                }
+            };
+
+            // --- FILE HANDLING ---
+            fileUploadArea.addEventListener('click', () => fileInput.click());
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, e => {e.preventDefault(); e.stopPropagation();});
+            });
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, () => fileUploadArea.classList.add('border-indigo-500', 'bg-indigo-50'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileUploadArea.addEventListener(eventName, () => fileUploadArea.classList.remove('border-indigo-500', 'bg-indigo-50'));
+            });
+            fileUploadArea.addEventListener('drop', e => {
+                fileInput.files = e.dataTransfer.files;
+                const event = new Event('change', {bubbles: true});
+                fileInput.dispatchEvent(event);
+            });
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    selectedFile = fileInput.files[0];
+                    fileUploadText.textContent = selectedFile.name;
+                    showToast('File selected: ' + selectedFile.name);
+                }
+            });
+
+            // --- DIAGNOSIS PAGE LOGIC ---
+            diagnoseBtn.addEventListener('click', async () => {
+                setLoadingState(true, 'diagnose');
+                outputArea.innerHTML = '<p class="text-gray-500 italic">Generating diagnosis...</p>';
+                const response = await performDiagnosis('diagnose');
+                if (response) {
+                    try {
+                        const result = await response.json();
+                        const summaryText = result.summary.output;
+                        const formattedHtml = summaryText.replace(/### (.*)/g, '<h3 class="font-bold text-lg mt-4 mb-2">$1</h3>').replace(/- (.*)/g, '<li>$1</li>').replace(/\n/g, '<br>');
+                        outputArea.innerHTML = `<ul>${formattedHtml}</ul>`;
+
+                        const categories = ['X-Ray', 'MRI', 'General', 'Lab'];
+                        addHistoryEntry({
+                            id: Date.now(),
+                            date: new Date().toLocaleString(),
+                            category: categories[Math.floor(Math.random() * categories.length)],
+                            inputType: selectedFile ? 'Image' : 'Text',
+                            trustScore: (Math.random() * (98.5 - 75.0) + 75.0).toFixed(1),
+                            summary: summaryText.split('\n')[0].replace('### ', '') + '...'
+                        });
+                    } catch (e) {
+                        showToast('Failed to parse the diagnosis response.', true);
+                        outputArea.innerHTML = '<p class="text-red-500">Error: Could not display the result.</p>';
+                    }
+                } else {
+                    outputArea.innerHTML = '<p class="text-gray-500 italic">The generated diagnostic report will appear here...</p>';
+                }
+                setLoadingState(false, 'diagnose');
+            });
+
+            downloadBtn.addEventListener('click', async () => {
+                setLoadingState(true, 'download');
+                const response = await performDiagnosis('diagnose/download');
+                if (response) {
+                    try {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'diagnosis_summary.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        showToast('PDF download started.');
+                    } catch (e) {
+                        showToast('Failed to process the PDF download.', true);
+                    }
+                }
+                setLoadingState(false, 'download');
+            });
+
+            // --- REPORTING PAGE LOGIC ---
+            const handlePageChange = (newPage) => {
+                currentPage = newPage;
+                renderReportHistory(currentPage);
+            };
+
+            const renderPaginationControls = (totalItems, page) => {
+                paginationControls.innerHTML = '';
+                const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+                if (totalPages <= 1) return;
+
+                const startItem = (page - 1) * ITEMS_PER_PAGE + 1;
+                const endItem = Math.min(startItem + ITEMS_PER_PAGE - 1, totalItems);
+
+                let summary = document.createElement('p');
+                summary.className = 'text-sm text-gray-700';
+                summary.textContent = `Showing ${startItem} to ${endItem} of ${totalItems} results`;
+
+                let buttonsWrapper = document.createElement('div');
+                buttonsWrapper.className = 'flex space-x-2';
+
+                let prevButton = document.createElement('button');
+                prevButton.textContent = 'Previous';
+                prevButton.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed';
+                prevButton.disabled = page === 1;
+                prevButton.onclick = () => handlePageChange(currentPage - 1);
+
+                let nextButton = document.createElement('button');
+                nextButton.textContent = 'Next';
+                nextButton.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed';
+                nextButton.disabled = page === totalPages;
+                nextButton.onclick = () => handlePageChange(currentPage + 1);
+
+                buttonsWrapper.appendChild(prevButton);
+                buttonsWrapper.appendChild(nextButton);
+                paginationControls.appendChild(summary);
+                paginationControls.appendChild(buttonsWrapper);
+            };
+
+            const renderReportHistory = (page) => {
+                const history = getHistory();
+                historyTableBody.innerHTML = '';
+
+                if (history.length === 0) {
+                    historyTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-gray-500 py-4">No diagnosis history found.</td></tr>';
+                    paginationControls.innerHTML = '';
+                    return;
+                }
+
+                const start = (page - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                const paginatedItems = history.slice(start, end);
+
+                paginatedItems.forEach(entry => {
+                    const scoreColor = entry.trustScore > 90 ? 'text-green-600' : entry.trustScore > 80 ? 'text-yellow-600' : 'text-red-600';
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.date}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${entry.category}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${entry.inputType}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${scoreColor}">${entry.trustScore}%</td>
+                        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">${entry.summary}</td>
+                    `;
+                    historyTableBody.appendChild(row);
+                });
+
+                renderPaginationControls(history.length, page);
+            };
+
+            // --- EVALUATIONS PAGE LOGIC ---
+            const renderEvaluationDashboard = () => {
+                const history = getHistory();
+
+                if (history.length === 0) {
+                    avgTrustScoreEl.textContent = '0.0%';
+                    totalReportsEl.textContent = '0';
+                    highestCategoryEl.textContent = 'N/A';
+                    if (chartInstances.category) chartInstances.category.destroy();
+                    if (chartInstances.distribution) chartInstances.distribution.destroy();
+                    return;
+                }
+
+                const totalScore = history.reduce((acc, curr) => acc + parseFloat(curr.trustScore), 0);
+                const avgScore = totalScore / history.length;
+                totalReportsEl.textContent = history.length;
+                avgTrustScoreEl.textContent = `${avgScore.toFixed(1)}%`;
+
+                const categoryData = {};
+                history.forEach(entry => {
+                    if (!categoryData[entry.category]) {
+                        categoryData[entry.category] = {scores: [], count: 0};
+                    }
+                    categoryData[entry.category].scores.push(parseFloat(entry.trustScore));
+                    categoryData[entry.category].count++;
+                });
+
+                const labels = Object.keys(categoryData);
+                const avgScoresByCategory = labels.map(label => (categoryData[label].scores.reduce((a, b) => a + b, 0) / categoryData[label].scores.length));
+                const countsByCategory = labels.map(label => categoryData[label].count);
+
+                let maxAvg = 0;
+                let bestCat = 'N/A';
+                labels.forEach((label, index) => {
+                    if (avgScoresByCategory[index] > maxAvg) {
+                        maxAvg = avgScoresByCategory[index];
+                        bestCat = label;
+                    }
+                });
+                highestCategoryEl.textContent = bestCat;
+
+                renderBarChart('category-chart', 'Avg. Trust Score', labels, avgScoresByCategory, ['#4f46e5', '#10b981', '#f59e0b', '#3b82f6']);
+                renderDoughnutChart('distribution-chart', '# of Reports', labels, countsByCategory, ['#4f46e5', '#10b981', '#f59e0b', '#3b82f6']);
+            };
+
+            const renderBarChart = (canvasId, label, labels, data, colors) => {
+                if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                chartInstances[canvasId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {labels: labels, datasets: [{label: label, data: data, backgroundColor: colors, borderRadius: 4}]},
+                    options: {maintainAspectRatio: false, scales: {y: {beginAtZero: true, max: 100}}, plugins: {legend: {display: false}}}
+                });
+            };
+
+            const renderDoughnutChart = (canvasId, label, labels, data, colors) => {
+                if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                chartInstances[canvasId] = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {labels: labels, datasets: [{label: label, data: data, backgroundColor: colors, hoverOffset: 4}]},
+                    options: {maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+                });
+            };
+
+            // --- INITIALIZATION ---
+            initializeMockData();
+            showPage('home');
+        });
+    </script>
+</body>
+
+</html>
