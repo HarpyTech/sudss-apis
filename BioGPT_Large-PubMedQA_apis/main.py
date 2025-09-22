@@ -4,7 +4,7 @@ import torch, os
 from fastapi.middleware.cors import CORSMiddleware
 
 
-app = FastAPI()
+app = FastAPI("BioGPT API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Or use ["http://localhost:8000"] for stricter control
