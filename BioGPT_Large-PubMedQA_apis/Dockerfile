@@ -16,11 +16,11 @@ RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the app
-COPY . .
+# Copy the app code
+COPY main.py .
 
-# Set model name
-ENV MODEL_NAME=microsoft/BioGPT-Large
+# Set environment variable for model name
+ENV MODEL_NAME=microsoft/BioGPT-Large-PubMedQA
 
 # Expose API port
 EXPOSE 8000

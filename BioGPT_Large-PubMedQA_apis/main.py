@@ -1,24 +1,54 @@
 from fastapi import FastAPI, Query
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch, os
-from fastapi.middleware.cors import CORSMiddleware
+from transformers import pipeline
+from dotenv import load_dotenv
+import os
+import logging
 
+# Load environment variables
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
+if HF_TOKEN is None:
+    raise EnvironmentError("HF_TOKEN not found. Please set it in your .env file or environment.")
 
-app = FastAPI("BioGPT API")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Or use ["http://localhost:8000"] for stricter control
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+
+# Load BioGPT model ONCE at startup using pipeline
+app = FastAPI(title="BioGPT API with Auto-Tuned Prompts")
+
+qa_pipeline = pipeline(
+    "text-generation",
+    model="microsoft/BioGPT-Large-PubMedQA",
+    token=HF_TOKEN
 )
 
-tokenizer = None
-model = None
+# --- Prompt Tuning Logic ---
+def classify_question_type(question: str) -> str:
+    q = question.lower()
+    if any(kw in q for kw in ["define", "what is", "meaning", "describe"]):
+        return "definition"
+    elif any(kw in q for kw in ["treatment", "therapy", "medication", "manage"]):
+        return "treatment"
+    elif any(kw in q for kw in ["cause", "mechanism", "pathophysiology", "why"]):
+        return "mechanism"
+    else:
+        return "general"
 
+def generate_prompt(question: str) -> str:
+    q_type = classify_question_type(question)
+    if q_type == "definition":
+        return f"Provide a clear biomedical definition:\nQuestion: {question}"
+    elif q_type == "treatment":
+        return f"Summarize the current medical treatments:\nQuestion: {question}"
+    elif q_type == "mechanism":
+        return f"Explain the biomedical mechanisms involved:\nQuestion: {question}"
+    else:
+        return f"Answer the following biomedical question clearly:\nQuestion: {question}"
+
+# --- API Endpoints ---
 @app.get("/")
-def home():
-    return {"message": "BioGPT API is running. Use /ask?question=your_query"}
+def root():
+    return {"message": "BioGPT API with automated prompt tuning is ready. Use /ask?question=your_query"}
 
 @app.get("/health")
 def health():
@@ -26,30 +56,13 @@ def health():
 
 @app.get("/ask")
 def ask(question: str = Query(..., description="Biomedical question")):
-    global tokenizer, model
-
-    if tokenizer is None or model is None:
-        try:
-            print("🔄 Lazy-loading BioGPT model...")
-            MODEL_NAME = os.getenv("MODEL_NAME", "microsoft/BioGPT-Large-PubMedQA")
-            HF_TOKEN = os.getenv("HF_TOKEN")
-            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
-            model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, token=HF_TOKEN)
-            print("✅ Model loaded successfully.")
-        except Exception as e:
-            print(f"❌ Model loading failed: {e}")
-            return {"error": "Model failed to load. Check logs or HF_TOKEN."}
-
-    inputs = tokenizer(question, return_tensors="pt")
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_length=200,
-            do_sample=True,
-            top_k=50,
-            top_p=0.95
-        )
-
-    answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return {"question": question, "answer": answer}
+    """
+    Example:
+    GET /ask?question=What is the treatment for diabetes?
+    """
+    prompt = generate_prompt(question)
+    logging.info(f"Classified prompt: {prompt}")
+    result = qa_pipeline(prompt, max_length=400, do_sample=True, top_k=50, top_p=0.95, temperature=0.7)
+    answer = result[0]["generated_text"]
+    logging.info(f"Answer: {answer}")
+    return {"question": question, "prompt": prompt, "answer": answer}
