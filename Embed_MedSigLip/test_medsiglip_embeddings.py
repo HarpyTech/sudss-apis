@@ -158,3 +158,46 @@ try:
 except Exception as e:
     print(f"❌ Error occurred during processing: {e}")
 
+# ======================================================
+# Step 5: Save Separate FAISS indices for Image & Text
+# ======================================================
+import faiss
+import numpy as np
+import pandas as pd
+
+# Convert to numpy arrays
+image_embs_np = image_embs.numpy().astype("float32")
+text_embs_np = text_embs.numpy().astype("float32")
+
+# Build FAISS indices
+faiss_index_img = faiss.IndexFlatL2(image_embs_np.shape[1])
+faiss_index_txt = faiss.IndexFlatL2(text_embs_np.shape[1])
+
+faiss_index_img.add(image_embs_np)
+faiss_index_txt.add(text_embs_np)
+
+# Save indices
+faiss_img_path = r"C:\PES_MTECH_APR-24-2024\SEM-3\Capstone Project\PROJECT OUTPUT DELIVERABLES TO PES_27-8-2025\INDIANA UNIVERSITY DATASET\faiss_index_saved\faiss_image_embeddings.index"
+faiss_txt_path = r"C:\PES_MTECH_APR-24-2024\SEM-3\Capstone Project\PROJECT OUTPUT DELIVERABLES TO PES_27-8-2025\INDIANA UNIVERSITY DATASET\faiss_index_saved\faiss_text_embeddings.index"
+
+faiss.write_index(faiss_index_img, faiss_img_path)
+faiss.write_index(faiss_index_txt, faiss_txt_path)
+print(f"✅ Saved FAISS indices for image & text.")
+
+# Save metadata for later retrieval
+metadata = pd.DataFrame({
+    "uid": df["uid"],
+    "filename": df["filename"],
+    "image_path": df["image_path"],
+    "projection": df["projection"],
+    "findings": df["findings"],
+    "impression": df["impression"]
+})
+metadata.to_csv("image_metadata.csv", index_label="faiss_id")
+print("✅ Saved metadata file.")
+
+# Save embeddings as .npy for hybrid retrieval
+np.save(r"C:\PES_MTECH_APR-24-2024\SEM-3\Capstone Project\PROJECT OUTPUT DELIVERABLES TO PES_27-8-2025\INDIANA UNIVERSITY DATASET\faiss_index_saved\image_embeddings.npy", image_embs.numpy())
+np.save(r"C:\PES_MTECH_APR-24-2024\SEM-3\Capstone Project\PROJECT OUTPUT DELIVERABLES TO PES_27-8-2025\INDIANA UNIVERSITY DATASET\faiss_index_saved\text_embeddings.npy", text_embs.numpy())
+print("✅ Saved embeddings as .npy")
+
