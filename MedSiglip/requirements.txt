@@ -1,0 +1,12 @@
+torch
+transformers
+Pillow
+pandas
+faiss-cpu
+fastapi
+uvicorn
+numpy
+scikit-learn
+sentence-transformers
+sentencepiece
+protobuf
